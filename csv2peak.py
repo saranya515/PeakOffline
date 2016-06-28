@@ -54,9 +54,18 @@ print(dt.datetime.now() - t1)
 
 
 ## Create Peaks Details table based on spots
+rnd_time = traffic_agg.date_created[600]
+spots = pd.DataFrame([{'spot_id' : 1 ,'minute' : rnd_time, 'reach' : 1000}])
 
 peak_details = pd.DataFrame()
 ### for all spots
+for s in list(range(len(spots))):
+    tmp_df = spots.iloc[s, ]
+    time_index = traffic_agg.ix[traffic_agg.date_created == tmp_df.minute]
+    traffic_slice = traffic_agg.iloc[time_index:(time_index + 9),]
+    #merge spot with 10 min traffic window
+    print(spots.iloc[s])
+    peak_details.append(tmp_df)
 # slice ten minutes from traffic starting at spot data  merge
 #ts = pd.DataFrame({'date_created' : pd.date_range(min(df.date_created), + 10 max(df.date_created), freq='1Min')})
 # group by minute to get total reach... multiply with gross_uplift bang
