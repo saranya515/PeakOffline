@@ -42,23 +42,13 @@ spots.Datum = spots.Datum.map(lambda x: x.date)
 spots.Timestamp = spots.Datum.combine(spots.Sendezeit, func=dt.datetime.combine)
 
 
-# convert timestamp
-traffic['date_created'] = traffic.date_created.apply(lambda x: x.to_datetime())
-traffic = traffic.sort_values(by = ['country_code','date_created'])
-
-# aggregate over minutes
-traffic_agg = traffic.groupby(['country_code', 'date_created'])['anon_count'].sum().reset_index()
-traffic_agg = generate_missing_minutes(traffic_agg)
-traffic_agg.country_code = 'DE'
-
-
 # generate missing minutes
 ## DO PEAK MEASUREMENT
 # SE Style
 t1 = dt.datetime.now()
-traffic_agg['baseline'] = traffic_agg['anon_count'].rolling(center=True,window=41).median()
-traffic_agg['gross_uplift'] = 0
-traffic_agg.loc[traffic_agg.anon_count > traffic_agg.baseline * 1.6, 'gross_uplift'] = traffic_agg.anon_count - traffic_agg.baseline
+traffic['baseline'] = traffic['anon_count'].rolling(center=True,window=41).median()
+traffic['gross_uplift'] = 0
+traffic.loc[traffic.anon_count > traffic.baseline * 1.6, 'gross_uplift'] = traffic.anon_count - traffic.baseline
 print(dt.datetime.now() - t1)
 
 
