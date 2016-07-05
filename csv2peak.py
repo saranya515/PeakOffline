@@ -33,7 +33,7 @@ def generate_missing_minutes(df):
 #traffic = pd.read_csv('FR_tv_anonymous_per_minute_2016-06-07.csv')
 #traffic = traffic.loc[traffic.country_code == 'DE'] # filter by country 
 traffic = pd.read_csv('traffic_wix.csv')
-traffic.date_created = traffic.date_created.apply(lambda x: pd.to_datetime(x))
+traffic.date_created = traffic.date_created.apply(lambda x: pd.Timestamp(x))
 
 
 # SPOTS
@@ -57,21 +57,31 @@ t1 = dt.datetime.now()
 peak_details = pd.DataFrame()
 ### for all spots
 for s in list(range(len(spots))):
-    tmp_df = spots.iloc[s, ]                                                # pick spot
+    # pick spot
+    tmp_df = spots.iloc[s, ]                                                
      
-    # Check whether traffic data is available,match spot time and traffic
-    if tmp_df.Timestamp in traffic.date_created:
-        time_index = traffic.index[traffic.date_created == tmp_df.Timestamp][0]
-        traffic_slice = traffic.iloc[time_index:(time_index + 10),]  
-    else:
-        next           
+    # Check whether traffic data is available,match spot time and traffic, extract ten minutes
+    if len(traffic.loc[traffic.date_created == tmp_df.Timestamp]) > 0:
+        continue
     
-    traffic_slice['spot_id'] = tmp_df.spot_id                           # create peak detail record
+    time_index = traffic.index[traffic.date_created == tmp_df.Timestamp][0]
+    traffic_slice = traffic.iloc[time_index:(time_index + 10),]  
+    
+    # create peak detail record
+    traffic_slice['spot_id'] = tmp_df.spot_id                           
     traffic_slice['reach'] = tmp_df.KTS
     peak_details = peak_details.append(traffic_slice)
+      
+    #else:
+     #   continue            
+    
 print(dt.datetime.now() - t1)
 
 
+for letter in 'Python':     # First Example
+   if letter == 'h':
+      continue
+   print('Current Letter :', letter)
 
 
 
