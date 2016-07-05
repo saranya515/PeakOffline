@@ -14,6 +14,11 @@ Created on Mon Jun 27 17:44:38 2016
 
 import pandas as pd
 import datetime as dt
+import os
+
+# set path to one of script, keep spoteffects data in same folder
+abspath = '/Users/matthiasgloel/PeakOffline/'
+os.chdir(abspath)
 
 def generate_missing_minutes(df):
     '''Genereates missing minutes of zero traffic for the traffic data of one campaign'''
@@ -25,21 +30,25 @@ def generate_missing_minutes(df):
 
 
 ## later read in from command line in __main__
-traffic = pd.read_csv('FR_tv_anonymous_per_minute_2016-06-07.csv')
-traffic = traffic.loc[traffic.country_code == 'DE'] # filter by country 
+#traffic = pd.read_csv('FR_tv_anonymous_per_minute_2016-06-07.csv')
+#traffic = traffic.loc[traffic.country_code == 'DE'] # filter by country 
+traffic = pd.read_csv('traffic_wix.csv')
+traffic.date_created = traffic.date_created.apply(lambda x: pd.to_datetime(x))
 
-spots = 's'
+
+# SPOTS
+spots = pd.read_excel('2016 06 28 EP WIX ALL FLIGHTS DE Malte Tool.xls', parse_dates = [['Datum','Sendezeit']])
+spots.Datum = spots.Datum.map(lambda x: x.date)
+spots.Timestamp = spots.Datum.combine(spots.Sendezeit, func=dt.datetime.combine)
 
 
 # convert timestamp
-traffic['date_created'] = traffic.date_created.apply(lambda x: pd.to_datetime(x))
+traffic['date_created'] = traffic.date_created.apply(lambda x: x.to_datetime())
 traffic = traffic.sort_values(by = ['country_code','date_created'])
 
 # aggregate over minutes
 traffic_agg = traffic.groupby(['country_code', 'date_created'])['anon_count'].sum().reset_index()
-
 traffic_agg = generate_missing_minutes(traffic_agg)
- 
 traffic_agg.country_code = 'DE'
 
 
@@ -60,12 +69,16 @@ spots = pd.DataFrame([{'spot_id' : 1 ,'minute' : rnd_time, 'reach' : 1000}])
 peak_details = pd.DataFrame()
 ### for all spots
 for s in list(range(len(spots))):
+    # first slice traffic create tmpd_ df... append to peak details    
     tmp_df = spots.iloc[s, ]
-    time_index = traffic_agg.ix[traffic_agg.date_created == tmp_df.minute]
-    traffic_slice = traffic_agg.iloc[time_index:(time_index + 9),]
+    # find minute of spot in traffic data
+    time_index = traffic_agg.index[traffic_agg.date_created == tmp_df.minute][0]
+    traffic_slice = traffic_agg.iloc[time_index:(time_index + 10),]
     #merge spot with 10 min traffic window
-    print(spots.iloc[s])
-    peak_details.append(tmp_df)
+    # tmp_df = pd.merge(tmp_df, traffic)
+    traffic_slice.loc['spot_id'] = tmp_df.spot_id
+    traffic_slice.loc[:,'reach'] = tmp_df.reach
+    peak_details.append(traffic_slice)
 # slice ten minutes from traffic starting at spot data  merge
 #ts = pd.DataFrame({'date_created' : pd.date_range(min(df.date_created), + 10 max(df.date_created), freq='1Min')})
 # group by minute to get total reach... multiply with gross_uplift bang
