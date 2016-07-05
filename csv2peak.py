@@ -37,9 +37,10 @@ traffic.date_created = traffic.date_created.apply(lambda x: pd.to_datetime(x))
 
 
 # SPOTS
-spots = pd.read_excel('2016 06 28 EP WIX ALL FLIGHTS DE Malte Tool.xls', parse_dates = [['Datum','Sendezeit']])
-spots.Datum = spots.Datum.map(lambda x: x.date)
+spots = pd.read_excel('2016 06 28 EP WIX ALL FLIGHTS DE Malte Tool.xls')
+spots.Datum = spots.Datum.map(lambda x: x.date())
 spots.Timestamp = spots.Datum.combine(spots.Sendezeit, func=dt.datetime.combine)
+spots.Timestamp = spots.Timestamp.apply(lambda x: x.replace(second=0))  # truncate seconds
 
 
 # generate missing minutes
@@ -51,10 +52,6 @@ traffic['gross_uplift'] = 0
 traffic.loc[traffic.anon_count > traffic.baseline * 1.6, 'gross_uplift'] = traffic.anon_count - traffic.baseline
 print(dt.datetime.now() - t1)
 
-
-## Create Peaks Details table based on spots
-rnd_time = traffic_agg.date_created[600]
-spots = pd.DataFrame([{'spot_id' : 1 ,'minute' : rnd_time, 'reach' : 1000}])
 
 peak_details = pd.DataFrame()
 ### for all spots
