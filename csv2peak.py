@@ -39,9 +39,9 @@ traffic.date_created = traffic.date_created.apply(lambda x: pd.to_datetime(x))
 # SPOTS
 spots = pd.read_excel('2016 06 28 EP WIX ALL FLIGHTS DE Malte Tool.xls')
 spots.Datum = spots.Datum.map(lambda x: x.date())
-spots.Timestamp = spots.Datum.combine(spots.Sendezeit, func=dt.datetime.combine)
-spots.Timestamp = spots.Timestamp.apply(lambda x: x.replace(second=0))  # truncate seconds
-
+spots['Timestamp'] = spots.Datum.combine(spots.Sendezeit, func=dt.datetime.combine)
+spots['Timestamp'] = spots.Timestamp.apply(lambda x: x.replace(second=0))           # truncate seconds
+spots['spot_id'] = spots.index + 1                                                  # spot id for peaks
 
 # generate missing minutes
 ## DO PEAK MEASUREMENT
@@ -52,20 +52,29 @@ traffic['gross_uplift'] = 0
 traffic.loc[traffic.anon_count > traffic.baseline * 1.6, 'gross_uplift'] = traffic.anon_count - traffic.baseline
 print(dt.datetime.now() - t1)
 
-
+#### CREATE PEAK DETAILS
+t1 = dt.datetime.now()
 peak_details = pd.DataFrame()
 ### for all spots
 for s in list(range(len(spots))):
-    # first slice traffic create tmpd_ df... append to peak details    
-    tmp_df = spots.iloc[s, ]
-    # find minute of spot in traffic data
-    time_index = traffic_agg.index[traffic_agg.date_created == tmp_df.minute][0]
-    traffic_slice = traffic_agg.iloc[time_index:(time_index + 10),]
-    #merge spot with 10 min traffic window
-    # tmp_df = pd.merge(tmp_df, traffic)
-    traffic_slice.loc['spot_id'] = tmp_df.spot_id
-    traffic_slice.loc[:,'reach'] = tmp_df.reach
-    peak_details.append(traffic_slice)
+    tmp_df = spots.iloc[s, ]                                                # pick spot
+     
+    # Check whether traffic data is available,match spot time and traffic
+    if tmp_df.Timestamp in traffic.date_created:
+        time_index = traffic.index[traffic.date_created == tmp_df.Timestamp][0]
+        traffic_slice = traffic.iloc[time_index:(time_index + 10),]  
+    else:
+        next           
+    
+    traffic_slice['spot_id'] = tmp_df.spot_id                           # create peak detail record
+    traffic_slice['reach'] = tmp_df.KTS
+    peak_details = peak_details.append(traffic_slice)
+print(dt.datetime.now() - t1)
+
+
+
+
+
 # slice ten minutes from traffic starting at spot data  merge
 #ts = pd.DataFrame({'date_created' : pd.date_range(min(df.date_created), + 10 max(df.date_created), freq='1Min')})
 # group by minute to get total reach... multiply with gross_uplift bang
