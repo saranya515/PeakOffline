@@ -32,7 +32,7 @@ def generate_missing_minutes(df):
 ## later read in from command line in __main__
 #traffic = pd.read_csv('FR_tv_anonymous_per_minute_2016-06-07.csv')
 #traffic = traffic.loc[traffic.country_code == 'DE'] # filter by country 
-traffic = pd.read_csv('traffic_wix_2015.csv')
+traffic = pd.read_csv('traffic_wix_MayJun2016.csv')
 traffic.date_created = traffic.date_created.apply(lambda x: pd.Timestamp(x))
 
 
@@ -84,4 +84,6 @@ sum_uplifts = peak_details.groupby(['spot_id'])['gross_uplift', 'net_uplift'].su
 # Insert data into spots sheet
 spots = pd.merge(spots, sum_uplifts, how='inner', on=['spot_id'])
 
-spots.to_excel('Wix_2015_Uplift.xls')
+# spots.Sendezeit = spots.Sendezeit.astype(str)
+spots = spots.loc[:,['Timestamp', 'Sender', 'Sendung', 'Kosten', 'Motiv', 'KTS', 'gross_uplift','net_uplift']]
+spots.to_excel('Wix_MayJun2016_Uplift.xls', index=False)
