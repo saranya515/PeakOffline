@@ -32,7 +32,7 @@ def generate_missing_minutes(df):
 ## later read in from command line in __main__
 #traffic = pd.read_csv('FR_tv_anonymous_per_minute_2016-06-07.csv')
 #traffic = traffic.loc[traffic.country_code == 'DE'] # filter by country 
-traffic = pd.read_csv('traffic_wix.csv')
+traffic = pd.read_csv('traffic_wix_2015.csv')
 traffic.date_created = traffic.date_created.apply(lambda x: pd.Timestamp(x))
 
 
@@ -43,9 +43,8 @@ spots['Timestamp'] = spots.Datum.combine(spots.Sendezeit, func=dt.datetime.combi
 spots['Timestamp'] = spots.Timestamp.apply(lambda x: x.replace(second=0))           # truncate seconds
 spots['spot_id'] = spots.index + 1                                                  # spot id for peaks
 
-# generate missing minutes
-## DO PEAK MEASUREMENT
-# SE Style
+
+## DO PEAK MEASUREMENT SE Style
 t1 = dt.datetime.now()
 traffic['baseline'] = traffic['anon_count'].rolling(center=True,window=41).median()
 traffic['gross_uplift'] = 0
@@ -55,13 +54,14 @@ print(dt.datetime.now() - t1)
 #### CREATE PEAK DETAILS
 t1 = dt.datetime.now()
 peak_details = pd.DataFrame()
-### for all spots
+
 for s in list(range(len(spots))):
     # pick spot
     tmp_df = spots.iloc[s, ]                                                
-     
+    
     # Check whether traffic data is available,match spot time and traffic, extract ten minutes
-    if len(traffic.loc[traffic.date_created == tmp_df.Timestamp]) > 0:
+    # if tmp_df.Timestamp not in list(traffic.date_created):    
+    if len(traffic.loc[traffic.date_created == tmp_df.Timestamp]) == 0:
         continue
     
     time_index = traffic.index[traffic.date_created == tmp_df.Timestamp][0]
@@ -71,20 +71,17 @@ for s in list(range(len(spots))):
     traffic_slice['spot_id'] = tmp_df.spot_id                           
     traffic_slice['reach'] = tmp_df.KTS
     peak_details = peak_details.append(traffic_slice)
-      
-    #else:
-     #   continue            
-    
+
 print(dt.datetime.now() - t1)
+peak_details.reach.loc[peak_details.reach == 0] = 0.001 # set zero reach to 0.001
 
+#### COMPUTE TOTAL AUDIENCE AND NET UPLIFT
+total_audience_per_minute = peak_details.groupby(['date_created'])['reach'].sum().reset_index()         # sum reach for overlaps
+peak_details = pd.merge(peak_details, total_audience_per_minute, how='left', on=['date_created'])           
+peak_details['net_uplift'] = peak_details.gross_uplift * (peak_details.reach_x / peak_details.reach_y)  # compute net_uplift
+sum_uplifts = peak_details.groupby(['spot_id'])['gross_uplift', 'net_uplift'].sum().reset_index()       # sum up by spot
 
-for letter in 'Python':     # First Example
-   if letter == 'h':
-      continue
-   print('Current Letter :', letter)
+# Insert data into spots sheet
+spots = pd.merge(spots, sum_uplifts, how='inner', on=['spot_id'])
 
-
-
-# slice ten minutes from traffic starting at spot data  merge
-#ts = pd.DataFrame({'date_created' : pd.date_range(min(df.date_created), + 10 max(df.date_created), freq='1Min')})
-# group by minute to get total reach... multiply with gross_uplift bang
+spots.to_excel('Wix_2015_Uplift.xls')
