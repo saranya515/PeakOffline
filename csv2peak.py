@@ -27,12 +27,10 @@ def generate_missing_minutes(df):
     df.anon_count = df.anon_count.fillna(0) 
     return df
 
-
-
 ## later read in from command line in __main__
 #traffic = pd.read_csv('FR_tv_anonymous_per_minute_2016-06-07.csv')
 #traffic = traffic.loc[traffic.country_code == 'DE'] # filter by country 
-traffic = pd.read_csv('traffic_wix_MayJun2016.csv')
+traffic = pd.read_csv('traffic_wix_JanFeb2016.csv')
 traffic.date_created = traffic.date_created.apply(lambda x: pd.Timestamp(x))
 
 
@@ -85,5 +83,38 @@ sum_uplifts = peak_details.groupby(['spot_id'])['gross_uplift', 'net_uplift'].su
 spots = pd.merge(spots, sum_uplifts, how='inner', on=['spot_id'])
 
 # spots.Sendezeit = spots.Sendezeit.astype(str)
-spots = spots.loc[:,['Timestamp', 'Sender', 'Sendung', 'Kosten', 'Motiv', 'KTS', 'gross_uplift','net_uplift']]
-spots.to_excel('Wix_MayJun2016_Uplift.xls', index=False)
+spots = spots.loc[:,['spot_id','Timestamp', 'Sender', 'Sendung', 'Kosten', 'Motiv', 'KTS', 'gross_uplift','net_uplift']]
+#spots.to_excel('Wix_MayJun2016_Uplift.xls', index=False)
+
+
+#### 
+from ggplot import *
+spotids = peak_details.spot_id.unique()
+#2866
+for s in spotids: 
+    data = peak_details.loc[peak_details.spot_id == s]
+    
+    plt1 = ggplot(data, aes(x='date_created', y='anon_count'))
+    plt1 += geom_line(aes(y='anon_count'),size=3)
+    plt1 += geom_line(aes(y='baseline'), color='blue',size=2)
+    plt1 += geom_line(aes(y=data.baseline * 1.6), color='red',size=2)
+    plt1 += geom_point()
+    plt1 += xlab('Minutes') 
+    plt1 += ylab('Unique Visitors') 
+    plt1 += theme_seaborn()
+    plt1 += theme(axis_text_x  = element_text(size=16)) 
+    plt1 += theme(axis_title_x  = element_text(size=22)) 
+    plt1 += theme(axis_text_y  = element_text(size=16)) 
+    plt1 += theme(axis_title_y  = element_text(size=22))
+    plt1 += theme(plot_title  = element_text(size=26))
+    plt1 += scale_x_date(labels = date_format("%H:%M"))
+    plt1 += ggtitle('10 Minutes Immediately After Spot Airing: ' + str(s))
+    #for m in len(data):
+    #print(plt1)
+    ggsave("./PeakDetailPlots/"+str(s)+"_pd.pdf",plot=plt1)
+
+#ggplot(data, aes(x='date_created',y='anon_count')) +\
+#    geom_point()
+#print(plt1)
+#print(plt)
+        
